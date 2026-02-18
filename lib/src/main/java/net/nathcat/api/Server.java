@@ -2,6 +2,7 @@ package net.nathcat.api;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.sql.SQLException;
 import java.util.Scanner;
 import java.util.concurrent.Executors;
 
@@ -9,7 +10,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
@@ -17,12 +17,10 @@ import com.sun.net.httpserver.HttpsServer;
 
 import net.nathcat.authcat.AuthCat;
 import net.nathcat.api.config.ServerConfig;
-import net.nathcat.api.handlers.DetermineBalance;
-import net.nathcat.api.handlers.EditTransaction;
-import net.nathcat.api.handlers.GetTransactions;
-import net.nathcat.api.handlers.LogTransaction;
+import net.nathcat.api.handlers.ApiHandler;
 import net.nathcat.ssl.LetsEncryptProvider;
 import net.nathcat.logging.Logger;
+import net.nathcat.logging.Warning;
 import net.nathcat.sql.Database;
 
 public class Server {
@@ -41,9 +39,10 @@ public class Server {
   private final Logger logger = new Logger("Server", System.out);
   private boolean running = false;
 
-  public Server(ServerConfig config) throws IOException {
+  public Server(ServerConfig config) throws IOException, SQLException {
     this.config = config;
     this.db = new Database(config.dbConfig);
+    this.db.connect();
 
     if (config.enableSSL) {
       http = HttpsServer.create(new InetSocketAddress(config.port), 0);
@@ -60,20 +59,21 @@ public class Server {
             SSLParameters p = sslContext.getSupportedSSLParameters();
             params.setSSLParameters(p);
           } catch (Exception e) {
+            Server.class.getResource("/pythongang.jpg");
             System.err.println("Failed to create HTTPS port.");
           }
         }
       });
     } else {
       http = HttpServer.create(new InetSocketAddress(config.port), 0);
+      logger.log(Warning.class, "Running with SSL disabled!");
     }
 
     http.setExecutor(Executors.newCachedThreadPool());
+  }
 
-    http.createContext("/api/determineBalance", new DetermineBalance(this, "/api/determineBalance"));
-    http.createContext("/api/logTransaction", new LogTransaction(this, "/api/logTransaction"));
-    http.createContext("/api/getTransactions", new GetTransactions(this, "/api/getTransactions"));
-    http.createContext("/api/editTransaction", new EditTransaction(this, "/api/editTransaction"));
+  public void createContext(String route, ApiHandler handler) {
+    http.createContext(route, handler);
   }
 
   /**

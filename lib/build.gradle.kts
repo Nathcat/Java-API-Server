@@ -8,11 +8,37 @@
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
+    `maven-publish`
 }
 
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
+    maven {
+        name = "nathcatRepo"
+        url = uri("https://mvn.nathcat.net/releases")
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "nathcatRepo"
+            url = uri("https://mvn.nathcat.net/releases")
+            credentials(PasswordCredentials::class)
+            authentication {
+                create<BasicAuthentication>("basic")
+            }
+        }
+    }
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "net.nathcat"
+            artifactId = "api"
+            version = "1.0.0"
+            from(components["java"])
+        }
+    }
 }
 
 dependencies {
@@ -24,11 +50,11 @@ dependencies {
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
     implementation(libs.guava)
 
+    implementation("net.nathcat:sql:1.0.0")
+    implementation("net.nathcat:ssl:1.0.0")
+
     // Source: https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation("com.google.code.gson:gson:2.13.2")
-
-    implementation(project(":Java-SQL"))
-    implementation(project(":Java-SSL"))
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

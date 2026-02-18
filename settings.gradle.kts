@@ -11,6 +11,4 @@ plugins {
 }
 
 rootProject.name = "Java-API-Server"
-include("lib", "Java-SQL", "Java-SSL")
-project(":Java-SQL").rootDir = file("Java-SQL/lib")
-project(":Java-SSL").rootDir = file("Java-SSL/lib")
+include("lib")
