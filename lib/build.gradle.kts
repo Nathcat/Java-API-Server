@@ -35,7 +35,7 @@ publishing {
         create<MavenPublication>("maven") {
             groupId = "net.nathcat"
             artifactId = "api"
-            version = "1.0.2"
+            version = "1.0.4"
             from(components["java"])
         }
     }

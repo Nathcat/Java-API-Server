@@ -13,4 +13,6 @@ public class User implements DBType {
   public String password;
   public String email;
   public String pfpPath;
+  public transient boolean verified;
+  public transient boolean passwordUpdated;
 }
