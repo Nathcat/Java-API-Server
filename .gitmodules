@@ -1,6 +1,0 @@
-[submodule "Java-SQL"]
-	path = Java-SQL
-	url = https://github.com/Nathcat/Java-SQL
-[submodule "Java-SSL"]
-	path = Java-SSL
-	url = https://github.com/Nathcat/Java-SSL
