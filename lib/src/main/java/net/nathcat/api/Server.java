@@ -2,6 +2,7 @@ package net.nathcat.api;
 
 import java.util.List;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.sql.SQLException;
@@ -189,7 +190,15 @@ public class Server {
     modules.add(module);
 
     for (ContextPair p : module.contexts()) {
-      createContext(Path.of(module.basePath(), p.path).toString(), p.handler);
+      ApiHandler h;
+      try {
+        h = p.handler.getConstructor(Server.class, String.class).newInstance(this, p.handler.getName());
+      } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+          | NoSuchMethodException | SecurityException e) {
+        throw new RuntimeException(e);
+      }
+
+      createContext(Path.of(module.basePath(), p.path).toString(), h);
     }
 
     for (Class<? extends ServerCommand> c : module.getCommands()) {
