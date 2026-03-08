@@ -1,8 +1,10 @@
 package net.nathcat.api;
 
+import java.util.List;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.Executors;
 
@@ -17,6 +19,7 @@ import com.sun.net.httpserver.HttpsServer;
 
 import net.nathcat.authcat.AuthCat;
 import net.nathcat.api.config.ServerConfig;
+import net.nathcat.api.exceptions.CommandAlreadyRegistered;
 import net.nathcat.api.handlers.ApiHandler;
 import net.nathcat.ssl.LetsEncryptProvider;
 import net.nathcat.logging.Logger;
@@ -36,8 +39,10 @@ public class Server {
 
   private final ServerConfig config;
   private final HttpServer http;
-  private final Logger logger = new Logger("Server", System.out);
+  public final Logger logger = new Logger("Server", System.out);
   private boolean running = false;
+
+  private final List<ServerCommand> commands = new ArrayList<>();
 
   public Server(ServerConfig config) throws IOException, SQLException {
     this.config = config;
@@ -70,10 +75,50 @@ public class Server {
     }
 
     http.setExecutor(Executors.newCachedThreadPool());
+
+    registerCommand(HelpCommand.class);
+    registerCommand(QuitCommand.class);
+  }
+
+  /**
+   * Get a list of currently registered commands
+   */
+  public ServerCommand[] getCommands() {
+    return commands.toArray(new ServerCommand[0]);
   }
 
   public void createContext(String route, ApiHandler handler) {
     http.createContext(route, handler);
+  }
+
+  /**
+   * Register a command to the server. Throws {@link CommandAlreadyRegistered} if
+   * the command is already registered.
+   *
+   */
+  public void registerCommand(Class<? extends ServerCommand> c) {
+    for (int i = 0; i < commands.size(); i++) {
+      if (commands.get(i).getClass() == c)
+        throw new CommandAlreadyRegistered(c);
+    }
+
+    try {
+      commands.add(c.getConstructor().newInstance());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Remove a command from the server
+   */
+  public void removeCommand(Class<? extends ServerCommand> c) {
+    for (int i = 0; i < commands.size(); i++) {
+      if (commands.get(i).getClass() == c) {
+        commands.remove(i);
+        break;
+      }
+    }
   }
 
   /**
@@ -108,12 +153,10 @@ public class Server {
     while (running) {
       String c = in.nextLine();
 
-      switch (c) {
-        case "q" -> {
-          running = false;
-        }
-        default -> {
-          logger.log("Commands :3 \n\t'q' - Quit \n\t'h' - help");
+      for (ServerCommand command : commands) {
+        if (command.matches(c)) {
+          command.run(this);
+          break;
         }
       }
     }
@@ -127,5 +170,9 @@ public class Server {
     http.stop(0);
 
     logger.log("Server has been stopped! Good bye :3");
+  }
+
+  public void stop() {
+    running = false;
   }
 }
