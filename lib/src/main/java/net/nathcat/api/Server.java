@@ -3,6 +3,7 @@ package net.nathcat.api;
 import java.util.List;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -43,6 +44,7 @@ public class Server {
   private boolean running = false;
 
   private final List<ServerCommand> commands = new ArrayList<>();
+  private final List<Module> modules = new ArrayList<>();
 
   public Server(ServerConfig config) throws IOException, SQLException {
     this.config = config;
@@ -174,5 +176,24 @@ public class Server {
 
   public void stop() {
     running = false;
+  }
+
+  public <T extends Module> void registerModule(Class<T> mC) {
+    T module;
+    try {
+      module = mC.getConstructor().newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    modules.add(module);
+
+    for (ContextPair p : module.contexts()) {
+      createContext(Path.of(module.basePath(), p.path).toString(), p.handler);
+    }
+
+    for (Class<? extends ServerCommand> c : module.getCommands()) {
+      registerCommand(c);
+    }
   }
 }

@@ -7,5 +7,9 @@ package net.nathcat.api;
  *
  */
 public interface Module {
+  Class<? extends ServerCommand>[] getCommands();
 
+  String basePath();
+
+  ContextPair[] contexts();
 }

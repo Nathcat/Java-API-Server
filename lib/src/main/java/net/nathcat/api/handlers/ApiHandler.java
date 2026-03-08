@@ -40,11 +40,24 @@ public abstract class ApiHandler implements HttpHandler {
   protected final Server server;
   protected final Logger logger;
   protected final String[] validMethods;
+  protected final boolean requireAuth;
 
   protected ApiHandler(Server server, String loggerName, String[] validMethods) {
     this.server = server;
     this.logger = new Logger(loggerName, System.out);
     this.validMethods = validMethods;
+    this.requireAuth = true;
+  }
+
+  /**
+   * Allows setting require auth field. Note that if require auth is set to false,
+   * the user field in the handle method WILL be null.
+   */
+  protected ApiHandler(Server server, String loggerName, String[] validMethods, boolean requireAuth) {
+    this.server = server;
+    this.logger = new Logger(loggerName, System.out);
+    this.validMethods = validMethods;
+    this.requireAuth = requireAuth;
   }
 
   protected void writeError(HttpExchange ex, int code) throws IOException {
@@ -114,13 +127,17 @@ public abstract class ApiHandler implements HttpHandler {
       return;
     }
 
+    Map<String, String> getParams = queryToMap(ex.getRequestURI().getQuery());
+
+    if (!requireAuth) {
+      handle(ex, null, getParams);
+    }
+
     String cookies = headers.getFirst("Cookie");
     if (cookies == null) {
       writeError(ex, 403);
       return;
     }
-
-    Map<String, String> getParams = queryToMap(ex.getRequestURI().getQuery());
 
     // Find the auth cookie
     Matcher m = authCookiePattern.matcher(cookies);
