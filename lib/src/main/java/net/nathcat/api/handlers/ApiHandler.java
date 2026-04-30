@@ -130,7 +130,13 @@ public abstract class ApiHandler implements HttpHandler {
     Map<String, String> getParams = queryToMap(ex.getRequestURI().getQuery());
 
     if (!requireAuth) {
-      handle(ex, null, getParams);
+      try {
+        handle(ex, null, getParams);
+      } catch (Exception e) {
+        writeError(ex, 500);
+        logger.log(Error.class, e.toString());
+      }
+      return;
     }
 
     String cookies = headers.getFirst("Cookie");
