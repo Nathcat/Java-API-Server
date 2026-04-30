@@ -49,8 +49,13 @@ public class Server {
 
   public Server(ServerConfig config) throws IOException, SQLException {
     this.config = config;
-    this.db = new Database(config.dbConfig);
-    this.db.connect();
+
+    if (config.dbConfig != null) {
+      this.db = new Database(config.dbConfig);
+      this.db.connect();
+    } else {
+      this.db = null;
+    }
 
     if (config.enableSSL) {
       http = HttpsServer.create(new InetSocketAddress(config.port), 0);
